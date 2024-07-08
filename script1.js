@@ -1,5 +1,5 @@
 let currentSong = new Audio();
-let songsInfo=[];
+let songsInfo = [];
 let songs = [];
 let currfolder;
 let selectedSongIndex = 0;
@@ -76,12 +76,13 @@ async function getSongs(folder) {
 }
 
 const playMusic = async (track, pause = false) => {
-  selectedSong = songs.indexOf(track);
+  selectedSongIndex = songs.indexOf(track);
   currentSong.src = `/${currfolder}/${track}`;
-  await songTab(songs[selectedSong]);
+  await songTab(currfolder);
   if (!pause) {
     currentSong.play();
     document.getElementById("play").src = "Images/pause.svg";
+    document.getElementById("play-2").src = "Images/pause.svg";
   }
   document.querySelector(".songinfo").innerHTML = decodeURI(
     track.replace(".mp3", "")
@@ -127,7 +128,7 @@ async function displayAlbums() {
                 <p>${response.description}</p>
                 </div>
               </div>`;
-              songsInfo.push(response);
+        songsInfo.push(response);
       }
     }
 
@@ -142,9 +143,8 @@ async function displayAlbums() {
   }
 }
 
-async function songTab() {
+async function songTab(folder) {
   try {
-    // Fetch the info.json for the given folder
     let response = await fetch(`./songs/${folder}/info.json`);
     if (!response.ok) {
       throw new Error(`Network response was not ok: ${response.statusText}`);
@@ -154,9 +154,8 @@ async function songTab() {
     let songInfo = document.querySelector(".songInfo");
 
     console.log("Song info", songInfo);
-    console.log("Current song:", song, "\nResponse:", songInfoData);
+    console.log("Current song:", currentSong.src, "\nResponse:", songInfoData);
 
-    // Update the song info display
     songInfo.innerHTML = `<div data-folder="${folder}" class="songInfo">
       <h2>${songInfoData.title}</h2>
       <p>${songInfoData.description}</p>
@@ -166,15 +165,20 @@ async function songTab() {
   }
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+  main();
+});
+
 async function main() {
   try {
-    songs = await getSongs("songs/Devotional");
+    const defaultFolder = "songs/Devotional";
+    songs = await getSongs(defaultFolder);
     if (songs.length > 0) {
       playMusic(songs[0], true);
     }
 
-    displayAlbums();
-    await songTab();
+    await displayAlbums();
+    await songTab(defaultFolder);
 
     const playButton = document.getElementById("play");
     const previousButton = document.getElementById("previous");
@@ -198,7 +202,12 @@ async function main() {
       }
     }
     
-    previousButton_2.addEventListener("click", () => {
+    previousButton.addEventListener("click", playPreviousSong);
+    nextButton.addEventListener("click", playNextSong);
+    previousButton_2.addEventListener("click", playPreviousSong);
+    nextButton_2.addEventListener("click", playNextSong);
+
+    function playPreviousSong() {
       currentSong.pause();
       let index = songs.indexOf(decodeURI(currentSong.src.split("/").slice(-1)[0]));
       if (index > 0) {
@@ -206,15 +215,36 @@ async function main() {
       } else {
         playMusic(songs[songs.length - 1]);
       }
-    });
+    }
 
-    nextButton_2.addEventListener("click", () => {
+    function playNextSong() {
       currentSong.pause();
       let index = songs.indexOf(decodeURI(currentSong.src.split("/").slice(-1)[0]));
       if (index < songs.length - 1) {
         playMusic(songs[index + 1]);
       } else {
         playMusic(songs[0]);
+      }
+    }
+
+    document.querySelector(".range input").addEventListener("input", (e) => {
+      currentSong.volume = parseInt(e.target.value) / 100;
+      if (currentSong.volume > 0) {
+        document.querySelector(".volume img").src = "Images/volume.svg";
+      } else {
+        document.querySelector(".volume img").src = "Images/mute.svg";
+      }
+    });
+
+    document.querySelector(".volume img").addEventListener("click", () => {
+      if (currentSong.volume > 0) {
+        currentSong.volume = 0;
+        document.querySelector(".range input").value = 0;
+        document.querySelector(".volume img").src = "Images/mute.svg";
+      } else {
+        currentSong.volume = 0.5;
+        document.querySelector(".range input").value = 50;
+        document.querySelector(".volume img").src = "Images/volume.svg";
       }
     });
 
@@ -242,90 +272,11 @@ async function main() {
     currentSong.addEventListener("timeupdate", () => {
       document.querySelector(".songTime").innerHTML = `${secondsToMinutesSeconds(currentSong.currentTime)} / ${secondsToMinutesSeconds(currentSong.duration)}`;
       document.querySelector(".circle").style.left = (currentSong.currentTime / currentSong.duration) * 100 + "%";
-    });
-
-    currentSong.addEventListener("timeupdate", () => {
       document.querySelector(".current").innerHTML = `${secondsToMinutesSeconds(currentSong.currentTime)}`;
       document.querySelector(".circle-2").style.left = (currentSong.currentTime / currentSong.duration) * 100 + "%";
-    });
-
-    currentSong.addEventListener("timeupdate", () => {
       document.querySelector(".total").innerHTML = `${secondsToMinutesSeconds(currentSong.duration)}`;
-      document.querySelector(".circle-2").style.left = (currentSong.currentTime / currentSong.duration) * 100 + "%";
     });
-
-    document.querySelector(".seekbar").addEventListener("click", (e) => {
-      let seekbar = e.target.getBoundingClientRect();
-      let clickPosition = (e.clientX - seekbar.left) / seekbar.width;
-      currentSong.currentTime = clickPosition * currentSong.duration;
-    });
-
-    document.querySelector(".seekbar-2").addEventListener("click", (e) => {
-      let seekbar = e.target.getBoundingClientRect();
-      let clickPosition = (e.clientX - seekbar.left) / seekbar.width;
-      currentSong.currentTime = clickPosition * currentSong.duration;
-    });
-
-    document.querySelector(".hamburger").addEventListener("click", () => {
-      document.querySelector(".left").style.left = 0;
-    });
-
-    document.querySelector(".close").addEventListener("click", () => {
-      document.querySelector(".left").style.left = "-120%";
-    });
-
-    document.querySelector(".songinfo").addEventListener("click", () => {
-      document.querySelector(".song-tab").style.bottom = 0;
-    });
-
-    document.querySelector(".dropdown").addEventListener("click", () => {
-      document.querySelector(".song-tab").style.bottom = "-120%";
-    });
-
-    previousButton.addEventListener("click", () => {
-      currentSong.pause();
-      let index = songs.indexOf(decodeURI(currentSong.src.split("/").slice(-1)[0]));
-      if (index > 0) {
-        playMusic(songs[index - 1]);
-      } else {
-        playMusic(songs[songs.length - 1]);
-      }
-    });
-
-    nextButton.addEventListener("click", () => {
-      currentSong.pause();
-      let index = songs.indexOf(decodeURI(currentSong.src.split("/").slice(-1)[0]));
-      if (index < songs.length - 1) {
-        playMusic(songs[index + 1]);
-      } else {
-        playMusic(songs[0]);
-      }
-    });
-
-    document.querySelector(".range input").addEventListener("input", (e) => {
-      currentSong.volume = parseInt(e.target.value) / 100;
-      if (currentSong.volume > 0) {
-        document.querySelector(".volume img").src = "Images/volume.svg";
-      } else {
-        document.querySelector(".volume img").src = "Images/mute.svg";
-      }
-    });
-
-    document.querySelector(".volume img").addEventListener("click", () => {
-      if (currentSong.volume > 0) {
-        currentSong.volume = 0;
-        document.querySelector(".range input").value = 0;
-        document.querySelector(".volume img").src = "Images/mute.svg";
-      } else {
-        currentSong.volume = 0.5;
-        document.querySelector(".range input").value = 50;
-        document.querySelector(".volume img").src = "Images/volume.svg";
-      }
-    });
-
   } catch (error) {
     console.error("Error initializing application:", error);
   }
 }
-
-main();
