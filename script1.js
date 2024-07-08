@@ -173,7 +173,7 @@ async function main() {
       playMusic(songs[0], true);
     }
 
-    displayAlbums();
+    await displayAlbums();
     await songTab();
 
     const playButton = document.getElementById("play");
